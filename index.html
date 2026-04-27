@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meu Controle Financeiro</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+    <header class="top-bar">
+        <h1>Minha Conta</h1>
+    </header>
+
+    <main class="content-area">
+        <section id="lobby-dashboard" class="lobby active">
+            <h2>Visão Geral</h2>
+            <div class="card balance-card">
+                <p>Saldo em Conta (Disponível)</p>
+                <h3 id="saldo-atual">R$ 0,00</h3>
+            </div>
+            
+            <div class="resumo-grid">
+                <div class="card">
+                    <p>Entradas</p>
+                    <h4 id="total-entradas" style="color: var(--primary);">R$ 0,00</h4>
+                </div>
+                <div class="card">
+                    <p>Saídas</p>
+                    <h4 id="total-saidas" style="color: #d32f2f;">R$ 0,00</h4>
+                </div>
+            </div>
+
+            <div class="charts-grid">
+                <div class="card chart-container">
+                    <h4 style="text-align: center; margin-bottom: 10px; font-size: 0.9rem; color: var(--text-light);">Origem da Renda</h4>
+                    <div style="position: relative; height: 200px; width: 100%;">
+                        <canvas id="grafico-entradas"></canvas>
+                    </div>
+                </div>
+                <div class="card chart-container">
+                    <h4 style="text-align: center; margin-bottom: 10px; font-size: 0.9rem; color: var(--text-light);">Onde estou gastando</h4>
+                    <div style="position: relative; height: 200px; width: 100%;">
+                        <canvas id="grafico-saidas"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card investment-total-card">
+                <p>Patrimônio Total (Valor de Mercado)</p>
+                <h3 id="patrimonio-total" style="color: #1976d2;">R$ 0,00</h3>
+                <small id="lucro-patrimonio" style="color: var(--primary); font-weight: bold;"></small>
+            </div>
+
+            <div class="card emergency-card">
+                <p>Reserva de Emergência (Meta: R$ 10.000,00)</p>
+                <progress id="barra-reserva" value="0" max="100"></progress>
+                <small id="texto-reserva">0% da meta alcançada</small>
+            </div>
+
+            <h3>Últimos Lançamentos</h3>
+            <div id="lista-transacoes" class="extrato"></div>
+        </section>
+
+        <section id="lobby-lancamentos" class="lobby">
+            <h2>Novo Lançamento</h2>
+            <div class="card">
+                <form id="form-lancamento">
+                    <div class="form-group">
+                        <label>Tipo</label>
+                        <select id="tipo" required>
+                            <option value="entrada">Entrada</option>
+                            <option value="saida">Saída</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Descrição</label>
+                        <input type="text" id="descricao" placeholder="Ex: Conta de água, Peças pro Uno, Pix recebido..." required>
+                    </div>
+                    <div class="form-group">
+                        <label>Valor (R$)</label>
+                        <input type="number" id="valor" step="0.01" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Categoria</label>
+                        <select id="categoria" required></select>
+                    </div>
+                    <div class="form-group">
+                        <label>Data</label>
+                        <input type="date" id="data" required>
+                    </div>
+                    <button type="submit" class="btn-primary">Salvar Lançamento</button>
+                </form>
+            </div>
+        </section>
+
+        <section id="lobby-investimentos" class="lobby">
+            <h2>Gestão de Ativos</h2>
+            
+            <div class="card">
+                <details>
+                    <summary style="cursor: pointer; font-weight: bold; color: var(--primary);">Definir Metas de Carteira (%)</summary>
+                    <div style="margin-top: 10px;">
+                        <div class="form-grid-metas">
+                            <input type="number" id="meta-rf" placeholder="Renda Fixa %">
+                            <input type="number" id="meta-acoes" placeholder="Ações %">
+                            <input type="number" id="meta-fiis" placeholder="FIIs %">
+                            <input type="number" id="meta-cripto" placeholder="Cripto %">
+                        </div>
+                        <button onclick="salvarMetas()" class="btn-primary" style="margin-top: 10px; padding: 0.5rem;">Atualizar Objetivos</button>
+                    </div>
+                </details>
+            </div>
+
+            <div class="card">
+                <form id="form-investimento">
+                    <div class="form-group">
+                        <label>Ativo (Ticker/Nome)</label>
+                        <input type="text" id="inv-ativo" placeholder="Ex: PETR4, MXRF11, bitcoin..." required>
+                    </div>
+                    <div class="form-group">
+                        <label>Categoria</label>
+                        <select id="inv-categoria" required>
+                            <option value="Renda Fixa">Renda Fixa</option>
+                            <option value="Ações">Ações (B3)</option>
+                            <option value="FIIs">Fundos Imobiliários (B3)</option>
+                            <option value="Cripto">Criptoativos</option>
+                        </select>
+                    </div>
+                    <div class="form-grid-metas">
+                        <div class="form-group">
+                            <label>Quantidade</label>
+                            <input type="number" id="inv-quantidade" step="any" placeholder="Ex: 100" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Custo Total Pago (R$)</label>
+                            <input type="number" id="inv-valor" step="0.01" placeholder="Ex: 1500.00" required>
+                        </div>
+                    </div>
+                    <p style="font-size: 0.7rem; color: var(--text-light); margin-bottom: 10px;">* O Custo Total será deduzido do seu saldo.</p>
+                    <button type="submit" class="btn-primary" style="background-color: #1976d2;">Confirmar Investimento</button>
+                </form>
+            </div>
+
+            <h3>Análise: Atual vs Objetivo</h3>
+            <div id="analise-carteira" class="card"></div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1rem;">
+                <h3>Meus Ativos</h3>
+                <button onclick="sincronizarCotacoes()" class="btn-small sync-btn" id="btn-sync">
+                    <span class="material-icons" style="font-size: 1.2rem;">sync</span> Mercado
+                </button>
+            </div>
+            
+            <div id="lista-investimentos" class="extrato"></div>
+        </section>
+
+        <section id="lobby-ir" class="lobby">
+            <h2>Relatório para IR e DASN</h2>
+            <p style="font-size: 0.9rem; color: var(--text-light); margin-bottom: 1rem;">Resumo para suas obrigações fiscais. (Valores baseados no Custo de Aquisição e Entradas registradas).</p>
+            
+            <div class="resumo-grid">
+                <div class="card">
+                    <p style="font-size: 0.8rem; font-weight: bold;">Rend. Tributáveis (Salário)</p>
+                    <h4 id="ir-salario" style="color: var(--primary);">R$ 0,00</h4>
+                </div>
+                <div class="card">
+                    <p style="font-size: 0.8rem; font-weight: bold;">Faturamento Bruto (MEI)</p>
+                    <h4 id="ir-mei" style="color: #fbc02d;">R$ 0,00</h4>
+                </div>
+            </div>
+            
+            <div class="card" style="margin-bottom: 1rem;">
+                <p style="font-size: 0.8rem; font-weight: bold;">Rendimentos Isentos (Dividendos)</p>
+                <h4 id="ir-dividendos" style="color: #1976d2;">R$ 0,00</h4>
+            </div>
+
+            <div class="card">
+                <h3 style="font-size: 1.2rem; color: #1976d2; margin-bottom: 0.5rem;">Bens e Direitos (Custo Histórico)</h3>
+                <p style="font-size: 0.8rem; color: var(--text-light); margin-bottom: 1rem;">O que vai na declaração é o que você PAGOU, não a cotação atual.</p>
+                <div id="lista-bens-direitos"></div>
+            </div>
+        </section>
+    </main>
+
+    <nav class="bottom-nav">
+        <button class="nav-item active" data-target="lobby-dashboard">
+            <span class="material-icons">dashboard</span>
+            <span>Início</span>
+        </button>
+        <button class="nav-item" data-target="lobby-lancamentos">
+            <span class="material-icons">add_circle</span>
+            <span>Lançar</span>
+        </button>
+        <button class="nav-item" data-target="lobby-investimentos">
+            <span class="material-icons">trending_up</span>
+            <span>Investir</span>
+        </button>
+        <button class="nav-item" data-target="lobby-ir">
+            <span class="material-icons">account_balance</span>
+            <span>IR</span>
+        </button>
+    </nav>
+
+    <div id="modal-overlay" class="modal-overlay">
+        <div id="modal-alert" class="modal-box">
+            <h3 id="modal-alert-title">Alerta</h3>
+            <p id="modal-alert-msg">Mensagem</p>
+            <div class="modal-actions">
+                <button id="modal-alert-ok" class="btn-primary">OK</button>
+            </div>
+        </div>
+        <div id="modal-confirm" class="modal-box">
+            <h3 id="modal-confirm-title" style="color: #d32f2f;">Confirmação</h3>
+            <p id="modal-confirm-msg">Mensagem</p>
+            <div class="modal-actions">
+                <button id="modal-confirm-cancel" class="btn-secondary">Cancelar</button>
+                <button id="modal-confirm-ok" class="btn-primary" style="background-color: #d32f2f;">Confirmar</button>
+            </div>
+        </div>
+        <div id="modal-prompt" class="modal-box">
+            <h3 id="modal-prompt-title" style="color: #1976d2;">Atualizar Valor</h3>
+            <p id="modal-prompt-msg">Mensagem</p>
+            <input type="number" id="modal-prompt-input" step="0.01" style="width: 100%; margin-bottom: 1rem; padding: 0.7rem; border-radius: 8px; border: 1px solid #ddd;">
+            <div class="modal-actions">
+                <button id="modal-prompt-cancel" class="btn-secondary">Cancelar</button>
+                <button id="modal-prompt-ok" class="btn-primary" style="background-color: #1976d2;">Salvar</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
