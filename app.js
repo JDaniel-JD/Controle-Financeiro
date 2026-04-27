@@ -27,11 +27,10 @@ let transacoes = JSON.parse(localStorage.getItem('minhas_transacoes')) || [];
 let investimentos = JSON.parse(localStorage.getItem('meus_investimentos')) || [];
 let metas = JSON.parse(localStorage.getItem('minhas_metas')) || { 'Renda Fixa': 25, 'Ações': 25, 'FIIs': 25, 'Cripto': 25 };
 
-// Migração de dados para a nova versão (com quantidade)
 investimentos = investimentos.map(inv => {
     return {
         ...inv,
-        quantidade: inv.quantidade || 1, // Se não tiver, assume 1 para não quebrar o cálculo
+        quantidade: inv.quantidade || 1, 
         valorAporte: inv.valorAporte || inv.valor, 
         valorAtual: inv.valorAtual || inv.valor
     };
@@ -121,9 +120,8 @@ window.sincronizarCotacoes = async function() {
 
     for (let inv of investimentos) {
         try {
-            // Criptomoedas via CoinGecko
             if (inv.categoria === 'Cripto') {
-                const idMoeda = inv.ativo.toLowerCase().trim(); // Ex: bitcoin, ethereum
+                const idMoeda = inv.ativo.toLowerCase().trim();
                 const res = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${idMoeda}&vs_currencies=brl`);
                 const data = await res.json();
                 
@@ -132,13 +130,11 @@ window.sincronizarCotacoes = async function() {
                     inv.valorAtual = precoAtual * inv.quantidade;
                     mudouAlgo = true;
                 } else {
-                    erros.push(`Não achamos o preço de: ${inv.ativo} (Verifique o nome).`);
+                    erros.push(`Não achamos o preço de: ${inv.ativo}`);
                 }
             } 
-            // Ações e FIIs via BRAPI (B3)
             else if (inv.categoria === 'Ações' || inv.categoria === 'FIIs') {
-                const ticker = inv.ativo.toUpperCase().trim(); // Ex: PETR4, MXRF11
-                // NOTA: A BRAPI recentemente exigiu tokens em alguns endpoints. Se falhar, é por causa disso.
+                const ticker = inv.ativo.toUpperCase().trim(); 
                 const res = await fetch(`https://brapi.dev/api/quote/${ticker}`);
                 const data = await res.json();
                 
@@ -165,11 +161,11 @@ window.sincronizarCotacoes = async function() {
     btnSync.classList.remove('loading');
 
     if (erros.length > 0) {
-        await customAlert("Atenção", `Cotações atualizadas, mas tivemos problemas com alguns ativos:<br><br><small>${erros.join('<br>')}</small><br><br>Você pode atualizar esses manualmente clicando no botão 'Atualizar' ao lado deles.`);
+        await customAlert("Atenção", `Tivemos problemas com alguns ativos:<br><br><small>${erros.join('<br>')}</small>`);
     } else if (mudouAlgo) {
-        await customAlert("Sucesso", "Todas as cotações de Bolsa e Cripto foram atualizadas com o mercado real!");
+        await customAlert("Sucesso", "Cotações atualizadas com sucesso!");
     } else {
-        await customAlert("Aviso", "Nenhum ativo automático encontrado. Renda Fixa deve ser atualizada manualmente.");
+        await customAlert("Aviso", "Nenhum ativo automático encontrado.");
     }
 };
 
@@ -230,6 +226,7 @@ window.salvarMetas = async function() {
     await customAlert("Sucesso", "Suas metas de carteira foram atualizadas!");
 };
 
+// --- NOVA LÓGICA DE EXCLUSÃO DE INVESTIMENTOS VINCULADOS ---
 window.deletarTransacao = async function(id) {
     const confirmou = await customConfirm("Atenção", "Tem certeza que deseja excluir este lançamento? <br><br>O seu saldo será recalculado.");
     if(confirmou) {
@@ -240,11 +237,34 @@ window.deletarTransacao = async function(id) {
 };
 
 window.deletarInvestimento = async function(id) {
-    const confirmou = await customConfirm("Atenção", "Deseja excluir este ativo da sua carteira?<br><br>Lembre-se de excluir a 'Saída' correspondente nos Lançamentos para que o dinheiro volte ao Saldo.");
+    const confirmou = await customConfirm("Atenção", "Deseja excluir este ativo da sua carteira e <strong>devolver o dinheiro do aporte</strong> para o seu saldo em conta?");
     if(confirmou) {
+        const invParaDeletar = investimentos.find(i => i.id === id);
+
+        // Remove o ativo da carteira
         investimentos = investimentos.filter(i => i.id !== id);
+
+        // Exclui a transação atrelada para estornar o saldo
+        if (invParaDeletar) {
+            if (invParaDeletar.idTransacaoVinculada) {
+                // Remove pela ID vinculada (novo método)
+                transacoes = transacoes.filter(t => t.id !== invParaDeletar.idTransacaoVinculada);
+            } else {
+                // Fallback: Remove buscando pelo valor e nome (para ativos criados antes da correção)
+                const transIndex = transacoes.findIndex(t => 
+                    t.categoria === 'investimento' && 
+                    t.valor === invParaDeletar.valorAporte && 
+                    t.descricao.includes(invParaDeletar.ativo)
+                );
+                if (transIndex !== -1) {
+                    transacoes.splice(transIndex, 1);
+                }
+            }
+        }
+
         salvarTudo();
         atualizarInterface();
+        await customAlert("Sucesso", "Ativo excluído e saldo estornado com sucesso!");
     }
 };
 
@@ -335,7 +355,7 @@ formLancamento.addEventListener('submit', async (e) => {
     atualizarInterface();
 });
 
-// --- LÓGICA DE INVESTIMENTOS ---
+// --- LÓGICA DE INVESTIMENTOS (CRIANDO O VÍNCULO) ---
 formInvestimento.addEventListener('submit', async (e) => {
     e.preventDefault();
     const valorInput = parseFloat(document.getElementById('inv-valor').value);
@@ -343,8 +363,12 @@ formInvestimento.addEventListener('submit', async (e) => {
     const ativo = document.getElementById('inv-ativo').value;
     const categoria = document.getElementById('inv-categoria').value;
 
+    const invId = Date.now();
+    const transId = invId + 1; // Cria um ID sequencial para a transação
+
     const novoInv = { 
-        id: Date.now(), 
+        id: invId, 
+        idTransacaoVinculada: transId, // Vínculo criado aqui!
         ativo, 
         categoria, 
         quantidade: quantidadeInput,
@@ -355,7 +379,7 @@ formInvestimento.addEventListener('submit', async (e) => {
 
     const dataAtual = new Date().toISOString().split('T')[0];
     const transacaoDeducao = {
-        id: Date.now() + 1,
+        id: transId, // Mesma ID salva dentro do investimento
         tipo: 'saida',
         descricao: `Aporte: ${ativo} (${quantidadeInput} cotas)`,
         valor: valorInput,
@@ -524,7 +548,6 @@ function atualizarInterface() {
     document.getElementById('meta-cripto').value = metas['Cripto'];
 }
 
-// Também injeta a animação CSS do spinner do botão de sync direto pelo JS para não precisar alterar o HTML de novo
 const style = document.createElement('style');
 style.innerHTML = `@keyframes spin { 100% { transform: rotate(360deg); } }`;
 document.head.appendChild(style);
