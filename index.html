@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 </head>
 <body>
 
@@ -21,6 +22,17 @@
                 <p>Saldo em Conta (Disponível)</p>
                 <h3 id="saldo-atual">R$ 0,00</h3>
             </div>
+
+            <div class="resumo-grid" style="margin-bottom: 1rem;">
+                <div class="card" style="background-color: #e3f2fd; border-left: 4px solid #1976d2; padding: 0.8rem;">
+                    <p style="font-size: 0.75rem; font-weight: bold; color: #1976d2;">Selic (BCB)</p>
+                    <h4 id="ind-selic" style="color: #333;">Carregando...</h4>
+                </div>
+                <div class="card" style="background-color: #fff3e0; border-left: 4px solid #f57c00; padding: 0.8rem;">
+                    <p style="font-size: 0.75rem; font-weight: bold; color: #f57c00;">Inflação Mensal - IPCA (BCB)</p>
+                    <h4 id="ind-ipca" style="color: #333;">Carregando...</h4>
+                </div>
+            </div>
             
             <div class="resumo-grid">
                 <div class="card">
@@ -30,6 +42,21 @@
                 <div class="card">
                     <p>Saídas</p>
                     <h4 id="total-saidas" style="color: #d32f2f;">R$ 0,00</h4>
+                </div>
+            </div>
+
+            <div class="card" style="border: 2px dashed #8e24aa; background: #faf5ff;">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                    <h3 style="color: #8e24aa; font-size: 1.1rem; margin: 0;"><span class="material-icons" style="vertical-align: middle;">auto_awesome</span> Automações</h3>
+                    <div style="display: flex; gap: 10px;">
+                        <button onclick="gerarAnaliseIA()" class="btn-small" style="background: #8e24aa; color: white; padding: 0.5rem;">Analisar com IA</button>
+                        <button onclick="enviarResumoWhatsApp()" class="btn-small" style="background: #25D366; color: white; padding: 0.5rem; display: flex; align-items: center; gap: 4px;">
+                            <span class="material-icons" style="font-size: 1rem;">chat</span> Notificar
+                        </button>
+                    </div>
+                </div>
+                <div id="ia-resultado" style="margin-top: 10px; font-size: 0.9rem; color: #4a148c; line-height: 1.5;">
+                    Analise seu caixa com o Gemini ou envie o resumo do mês para o seu WhatsApp.
                 </div>
             </div>
 
@@ -68,11 +95,19 @@
             <h2>Novo Lançamento</h2>
             <div class="card">
                 <form id="form-lancamento">
+                    <div class="form-group" style="background: #f4f6f8; padding: 10px; border-radius: 8px; border: 1px dashed var(--primary);">
+                        <label style="color: var(--primary); font-weight: bold; margin-bottom: 5px;">
+                            <span class="material-icons" style="vertical-align: middle; font-size: 1.2rem;">document_scanner</span> Leitor de Cupom Fiscal (IA)
+                        </label>
+                        <input type="file" id="ocr-input" accept="image/*" capture="environment" style="background: white;">
+                        <small id="ocr-status" style="color: var(--text-light); display: block; margin-top: 5px;">Tire uma foto do recibo para a IA encontrar o valor total.</small>
+                    </div>
+
                     <div class="form-group">
                         <label>Tipo</label>
                         <select id="tipo" required>
-                            <option value="entrada">Entrada</option>
                             <option value="saida">Saída</option>
+                            <option value="entrada">Entrada</option>
                         </select>
                     </div>
                     <div class="form-group">
@@ -221,9 +256,9 @@
             </div>
         </div>
         <div id="modal-prompt" class="modal-box">
-            <h3 id="modal-prompt-title" style="color: #1976d2;">Atualizar Valor</h3>
+            <h3 id="modal-prompt-title" style="color: #1976d2;">Entrada de Dados</h3>
             <p id="modal-prompt-msg">Mensagem</p>
-            <input type="number" id="modal-prompt-input" step="0.01" style="width: 100%; margin-bottom: 1rem; padding: 0.7rem; border-radius: 8px; border: 1px solid #ddd;">
+            <input type="text" id="modal-prompt-input" style="width: 100%; margin-bottom: 1rem; padding: 0.7rem; border-radius: 8px; border: 1px solid #ddd;">
             <div class="modal-actions">
                 <button id="modal-prompt-cancel" class="btn-secondary">Cancelar</button>
                 <button id="modal-prompt-ok" class="btn-primary" style="background-color: #1976d2;">Salvar</button>

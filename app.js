@@ -109,6 +109,185 @@ function customPrompt(title, msg, defaultValue) {
     });
 }
 
+// ==========================================
+// MÓDULO 4: NOTIFICAÇÃO WHATSAPP (CALLMEBOT)
+// ==========================================
+window.enviarResumoWhatsApp = async function() {
+    let phone = localStorage.getItem('zap_phone');
+    let apiKey = localStorage.getItem('zap_apikey');
+
+    if (!phone || !apiKey) {
+        await customAlert("Configurar WhatsApp", `
+            Para enviar mensagens de graça para você mesmo, usamos a API do <strong>CallMeBot</strong>.<br><br>
+            <strong>Passo 1:</strong> Salve o número <strong>+34 693 32 28 91</strong> nos seus contatos.<br>
+            <strong>Passo 2:</strong> Mande a mensagem: <em>I allow callmebot to send me messages</em> para este contato no WhatsApp.<br>
+            <strong>Passo 3:</strong> O bot vai te responder com a sua API Key secreta.
+        `);
+
+        phone = await customPrompt("Seu Número", "Digite seu número de telefone COM o código do país.<br>Exemplo para o Brasil: +5511999999999", "+55");
+        if (!phone) return;
+
+        apiKey = await customPrompt("Sua API Key", "Cole a API Key (números e letras) que o robô do WhatsApp te enviou:", "");
+        if (!apiKey) return;
+
+        // Limpa espaços e caracteres pra não quebrar a URL
+        phone = phone.replace(/[^0-9]/g, ''); 
+        localStorage.setItem('zap_phone', phone);
+        localStorage.setItem('zap_apikey', apiKey);
+    }
+
+    const icone = document.querySelector('button[onclick="enviarResumoWhatsApp()"]');
+    icone.innerHTML = `<span class="material-icons" style="font-size: 1rem; animation: spin 1s linear infinite;">sync</span> Enviando...`;
+
+    // Monta o texto da mensagem com as variáveis da tela
+    const saldo = document.getElementById('saldo-atual').innerText;
+    const entradas = document.getElementById('total-entradas').innerText;
+    const saidas = document.getElementById('total-saidas').innerText;
+    const patrimonio = document.getElementById('patrimonio-total').innerText;
+
+    const mensagemStr = `
+📊 *Resumo Financeiro* 📊
+*Saldo em Conta:* ${saldo}
+*Entradas no Mês:* ${entradas}
+*Saídas no Mês:* ${saidas}
+*Patrimônio Total:* ${patrimonio}
+_Gerado automaticamente pelo seu App de Controle Financeiro._
+    `.trim();
+
+    const urlEncodedText = encodeURIComponent(mensagemStr);
+    
+    // Requisição silenciosa via GET (é assim que o CallMeBot funciona)
+    const url = `https://api.callmebot.com/whatsapp.php?phone=${phone}&text=${urlEncodedText}&apikey=${apiKey}`;
+    
+    try {
+        // Envia usando no-cors pois a API deles às vezes bloqueia chamadas diretas de navegador por segurança (CORS)
+        await fetch(url, { mode: 'no-cors' }); 
+        
+        await customAlert("Sucesso!", "Mensagem enviada! Verifique o seu WhatsApp.");
+    } catch (e) {
+        console.error("Erro ao enviar WhatsApp", e);
+        await customAlert("Erro", "Falha ao enviar a mensagem. Verifique se o número e a API Key estão corretos. (Apague o localStorage para configurar novamente).");
+    }
+
+    icone.innerHTML = `<span class="material-icons" style="font-size: 1rem;">chat</span> Notificar`;
+};
+
+
+// ==========================================
+// MÓDULO 1: API BANCO CENTRAL (ECONOMIA)
+// ==========================================
+async function carregarIndicadoresBCB() {
+    try {
+        const resSelic = await fetch('https://api.bcb.gov.br/dados/serie/bcdata.sgs.432/dados/ultimos/1');
+        const dataSelic = await resSelic.json();
+        document.getElementById('ind-selic').textContent = `${dataSelic[0].valor}% a.a.`;
+
+        const resIpca = await fetch('https://api.bcb.gov.br/dados/serie/bcdata.sgs.433/dados/ultimos/1');
+        const dataIpca = await resIpca.json();
+        document.getElementById('ind-ipca').textContent = `${dataIpca[0].valor}%`;
+    } catch (e) {
+        document.getElementById('ind-selic').textContent = "Offline";
+        document.getElementById('ind-ipca').textContent = "Offline";
+    }
+}
+carregarIndicadoresBCB();
+
+// ==========================================
+// MÓDULO 2: VISÃO COMPUTACIONAL (OCR TESSERACT)
+// ==========================================
+const ocrInput = document.getElementById('ocr-input');
+const ocrStatus = document.getElementById('ocr-status');
+
+ocrInput.addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    ocrStatus.innerHTML = `<span class="material-icons" style="font-size: 1rem; animation: spin 1s linear infinite; vertical-align: middle;">sync</span> Lendo imagem, aguarde...`;
+    
+    try {
+        const { data: { text } } = await Tesseract.recognize(file, 'por');
+        const regex = /\b\d{1,3}(?:\.\d{3})*,\d{2}\b/g;
+        const matches = text.match(regex);
+
+        if (matches && matches.length > 0) {
+            let maiorValor = 0;
+            matches.forEach(m => {
+                let numFormatado = m.replace(/\./g, '').replace(',', '.');
+                let floatVal = parseFloat(numFormatado);
+                if (floatVal > maiorValor) maiorValor = floatVal;
+            });
+
+            document.getElementById('valor').value = maiorValor;
+            ocrStatus.innerHTML = `<span style="color: var(--primary);">✔ Valor <strong>R$ ${maiorValor.toFixed(2)}</strong> detectado! Verifique e salve.</span>`;
+            document.getElementById('descricao').value = "Compra Lida por OCR";
+        } else {
+            ocrStatus.innerHTML = `<span style="color: #d32f2f;">Não encontrei um valor claro. Digite manualmente.</span>`;
+        }
+    } catch (err) {
+        ocrStatus.innerHTML = "Erro ao ler a imagem.";
+    }
+    ocrInput.value = ""; 
+});
+
+// ==========================================
+// MÓDULO 3: INTELIGÊNCIA ARTIFICIAL (GEMINI)
+// ==========================================
+window.gerarAnaliseIA = async function() {
+    let apiKey = localStorage.getItem('gemini_api_key');
+    
+    if (!apiKey) {
+        const keyInput = await customPrompt("Configurar IA", "Para a Inteligência Artificial funcionar, precisamos da sua API Key do Google Gemini (é gratuita no Google AI Studio).<br><br>Cole sua chave abaixo:", "");
+        if (!keyInput) return;
+        apiKey = keyInput;
+        localStorage.setItem('gemini_api_key', apiKey);
+    }
+
+    const iaContainer = document.getElementById('ia-resultado');
+    iaContainer.innerHTML = `<span class="material-icons" style="font-size: 1rem; animation: spin 1s linear infinite; vertical-align: middle;">sync</span> A Inteligência Artificial está analisando seu caixa...`;
+
+    const resumoMes = {
+        totalEntradas: document.getElementById('total-entradas').innerText,
+        totalSaidas: document.getElementById('total-saidas').innerText,
+        saldoEmConta: document.getElementById('saldo-atual').innerText,
+        patrimonioInvestido: document.getElementById('patrimonio-total').innerText,
+        ultimasTransacoes: transacoes.slice(0, 10).map(t => `${t.tipo.toUpperCase()}: ${t.descricao} (R$ ${t.valor})`).join(' | ')
+    };
+
+    const promptText = `
+        Atue como um consultor financeiro sênior extremamente analítico. 
+        Aqui está o resumo financeiro atual do seu cliente:
+        Entradas: ${resumoMes.totalEntradas}
+        Saídas: ${resumoMes.totalSaidas}
+        Saldo em Conta: ${resumoMes.saldoEmConta}
+        Patrimônio: ${resumoMes.patrimonioInvestido}
+        Últimos lançamentos: ${resumoMes.ultimasTransacoes}.
+        
+        Escreva um parágrafo curto parabenizando/alertando sobre a situação, e um segundo parágrafo com uma dica acionável de onde ele deveria alocar o próximo dinheiro baseado nas transações recentes. Seja direto e não use formatação markdown complexa.
+    `;
+
+    try {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ contents: [{ parts: [{ text: promptText }] }] })
+        });
+
+        const data = await response.json();
+        
+        if (data.error) {
+            iaContainer.innerHTML = `<span style="color: #d32f2f;">Erro de API. Verifique se a sua Chave está correta. (Recarregue a página e tente apagar o localStorage se precisar trocar).</span>`;
+            localStorage.removeItem('gemini_api_key'); 
+            return;
+        }
+
+        const respostaIA = data.candidates[0].content.parts[0].text;
+        iaContainer.innerHTML = `<strong>Consultor IA:</strong><br>${respostaIA.replace(/\n/g, '<br>')}`;
+
+    } catch (e) {
+        iaContainer.innerHTML = "Falha ao conectar com o servidor da IA. Verifique a internet.";
+    }
+};
+
 // --- INTEGRAÇÃO COM APIs (BRAPI E COINGECKO) ---
 window.sincronizarCotacoes = async function() {
     const btnSync = document.getElementById('btn-sync');
@@ -147,7 +326,6 @@ window.sincronizarCotacoes = async function() {
                 }
             }
         } catch (error) {
-            console.error("Erro na API para " + inv.ativo, error);
             erros.push(`Falha de conexão ao buscar: ${inv.ativo}`);
         }
     }
@@ -226,7 +404,6 @@ window.salvarMetas = async function() {
     await customAlert("Sucesso", "Suas metas de carteira foram atualizadas!");
 };
 
-// --- NOVA LÓGICA DE EXCLUSÃO DE INVESTIMENTOS VINCULADOS ---
 window.deletarTransacao = async function(id) {
     const confirmou = await customConfirm("Atenção", "Tem certeza que deseja excluir este lançamento? <br><br>O seu saldo será recalculado.");
     if(confirmou) {
@@ -240,25 +417,18 @@ window.deletarInvestimento = async function(id) {
     const confirmou = await customConfirm("Atenção", "Deseja excluir este ativo da sua carteira e <strong>devolver o dinheiro do aporte</strong> para o seu saldo em conta?");
     if(confirmou) {
         const invParaDeletar = investimentos.find(i => i.id === id);
-
-        // Remove o ativo da carteira
         investimentos = investimentos.filter(i => i.id !== id);
 
-        // Exclui a transação atrelada para estornar o saldo
         if (invParaDeletar) {
             if (invParaDeletar.idTransacaoVinculada) {
-                // Remove pela ID vinculada (novo método)
                 transacoes = transacoes.filter(t => t.id !== invParaDeletar.idTransacaoVinculada);
             } else {
-                // Fallback: Remove buscando pelo valor e nome (para ativos criados antes da correção)
                 const transIndex = transacoes.findIndex(t => 
                     t.categoria === 'investimento' && 
                     t.valor === invParaDeletar.valorAporte && 
                     t.descricao.includes(invParaDeletar.ativo)
                 );
-                if (transIndex !== -1) {
-                    transacoes.splice(transIndex, 1);
-                }
+                if (transIndex !== -1) { transacoes.splice(transIndex, 1); }
             }
         }
 
@@ -355,7 +525,7 @@ formLancamento.addEventListener('submit', async (e) => {
     atualizarInterface();
 });
 
-// --- LÓGICA DE INVESTIMENTOS (CRIANDO O VÍNCULO) ---
+// --- LÓGICA DE INVESTIMENTOS ---
 formInvestimento.addEventListener('submit', async (e) => {
     e.preventDefault();
     const valorInput = parseFloat(document.getElementById('inv-valor').value);
@@ -364,11 +534,11 @@ formInvestimento.addEventListener('submit', async (e) => {
     const categoria = document.getElementById('inv-categoria').value;
 
     const invId = Date.now();
-    const transId = invId + 1; // Cria um ID sequencial para a transação
+    const transId = invId + 1; 
 
     const novoInv = { 
         id: invId, 
-        idTransacaoVinculada: transId, // Vínculo criado aqui!
+        idTransacaoVinculada: transId, 
         ativo, 
         categoria, 
         quantidade: quantidadeInput,
@@ -379,7 +549,7 @@ formInvestimento.addEventListener('submit', async (e) => {
 
     const dataAtual = new Date().toISOString().split('T')[0];
     const transacaoDeducao = {
-        id: transId, // Mesma ID salva dentro do investimento
+        id: transId, 
         tipo: 'saida',
         descricao: `Aporte: ${ativo} (${quantidadeInput} cotas)`,
         valor: valorInput,
