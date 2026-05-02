@@ -16,62 +16,43 @@
     </header>
 
     <main class="content-area">
-        <section id="lobby-dashboard" class="lobby active">
-            <h2>Visão Geral</h2>
+        <!-- 1. INÍCIO -->
+        <section id="lobby-inicio" class="lobby active">
+            <h2>Início</h2>
+            
+            <div id="area-alertas"></div>
+
             <div class="card balance-card">
                 <p>Saldo em Conta (Disponível)</p>
                 <h3 id="saldo-atual">R$ 0,00</h3>
             </div>
 
+            <!-- Indicadores Banco Central -->
             <div class="resumo-grid" style="margin-bottom: 1rem;">
                 <div class="card" style="background-color: #e3f2fd; border-left: 4px solid #1976d2; padding: 0.8rem;">
                     <p style="font-size: 0.75rem; font-weight: bold; color: #1976d2;">Selic (BCB)</p>
                     <h4 id="ind-selic" style="color: #333;">Carregando...</h4>
                 </div>
                 <div class="card" style="background-color: #fff3e0; border-left: 4px solid #f57c00; padding: 0.8rem;">
-                    <p style="font-size: 0.75rem; font-weight: bold; color: #f57c00;">Inflação Mensal - IPCA (BCB)</p>
+                    <p style="font-size: 0.75rem; font-weight: bold; color: #f57c00;">Inflação Mensal - IPCA</p>
                     <h4 id="ind-ipca" style="color: #333;">Carregando...</h4>
                 </div>
             </div>
-            
-            <div class="resumo-grid">
-                <div class="card">
-                    <p>Entradas</p>
-                    <h4 id="total-entradas" style="color: var(--primary);">R$ 0,00</h4>
-                </div>
-                <div class="card">
-                    <p>Saídas</p>
-                    <h4 id="total-saidas" style="color: #d32f2f;">R$ 0,00</h4>
-                </div>
-            </div>
 
+            <!-- Card de Automações -->
             <div class="card" style="border: 2px dashed #8e24aa; background: #faf5ff;">
                 <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
                     <h3 style="color: #8e24aa; font-size: 1.1rem; margin: 0;"><span class="material-icons" style="vertical-align: middle;">auto_awesome</span> Automações</h3>
                     <div style="display: flex; gap: 10px;">
                         <button onclick="gerarAnaliseIA()" class="btn-small" style="background: #8e24aa; color: white; padding: 0.5rem;">Analisar com IA</button>
-                        <button onclick="enviarResumoWhatsApp()" class="btn-small" style="background: #25D366; color: white; padding: 0.5rem; display: flex; align-items: center; gap: 4px;">
-                            <span class="material-icons" style="font-size: 1rem;">chat</span> Notificar
+                        <!-- BOTÃO DO TELEGRAM ATUALIZADO -->
+                        <button onclick="enviarResumoTelegram()" class="btn-small" style="background: #0088cc; color: white; padding: 0.5rem; display: flex; align-items: center; gap: 4px;">
+                            <span class="material-icons" style="font-size: 1rem;">send</span> Notificar
                         </button>
                     </div>
                 </div>
                 <div id="ia-resultado" style="margin-top: 10px; font-size: 0.9rem; color: #4a148c; line-height: 1.5;">
-                    Analise seu caixa com o Gemini ou envie o resumo do mês para o seu WhatsApp.
-                </div>
-            </div>
-
-            <div class="charts-grid">
-                <div class="card chart-container">
-                    <h4 style="text-align: center; margin-bottom: 10px; font-size: 0.9rem; color: var(--text-light);">Origem da Renda</h4>
-                    <div style="position: relative; height: 200px; width: 100%;">
-                        <canvas id="grafico-entradas"></canvas>
-                    </div>
-                </div>
-                <div class="card chart-container">
-                    <h4 style="text-align: center; margin-bottom: 10px; font-size: 0.9rem; color: var(--text-light);">Onde estou gastando</h4>
-                    <div style="position: relative; height: 200px; width: 100%;">
-                        <canvas id="grafico-saidas"></canvas>
-                    </div>
+                    Analise seu caixa com o Gemini ou envie o resumo do mês para o seu Telegram.
                 </div>
             </div>
 
@@ -91,6 +72,43 @@
             <div id="lista-transacoes" class="extrato"></div>
         </section>
 
+        <!-- 2. DASHBOARD -->
+        <section id="lobby-dashboard" class="lobby">
+            <h2>Dashboard</h2>
+            
+            <div class="card" style="margin-bottom: 1rem;">
+                <label style="font-weight: bold; color: var(--primary);">Selecione o Mês do Extrato</label>
+                <input type="month" id="mes-filtro" style="width: 100%; padding: 0.7rem; border-radius: 8px; border: 1px solid #ddd; font-size: 1rem; margin-top: 5px;">
+            </div>
+
+            <div class="resumo-grid">
+                <div class="card">
+                    <p>Entradas do Mês</p>
+                    <h4 id="total-entradas-mes" style="color: var(--primary);">R$ 0,00</h4>
+                </div>
+                <div class="card">
+                    <p>Saídas do Mês</p>
+                    <h4 id="total-saidas-mes" style="color: #d32f2f;">R$ 0,00</h4>
+                </div>
+            </div>
+
+            <div class="charts-grid">
+                <div class="card chart-container">
+                    <h4 style="text-align: center; margin-bottom: 10px; font-size: 0.9rem; color: var(--text-light);">Origem da Renda (Mês)</h4>
+                    <div style="position: relative; height: 200px; width: 100%;">
+                        <canvas id="grafico-entradas"></canvas>
+                    </div>
+                </div>
+                <div class="card chart-container">
+                    <h4 style="text-align: center; margin-bottom: 10px; font-size: 0.9rem; color: var(--text-light);">Onde estou gastando (Mês)</h4>
+                    <div style="position: relative; height: 200px; width: 100%;">
+                        <canvas id="grafico-saidas"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 3. LANÇAMENTOS -->
         <section id="lobby-lancamentos" class="lobby">
             <h2>Novo Lançamento</h2>
             <div class="card">
@@ -112,7 +130,7 @@
                     </div>
                     <div class="form-group">
                         <label>Descrição</label>
-                        <input type="text" id="descricao" placeholder="Ex: Conta de água, Peças pro Uno, Pix recebido..." required>
+                        <input type="text" id="descricao" placeholder="Ex: Mercado, Conta de água, Pix recebido..." required>
                     </div>
                     <div class="form-group">
                         <label>Valor (R$)</label>
@@ -131,9 +149,82 @@
             </div>
         </section>
 
+        <!-- 4. CONTAS A PAGAR -->
+        <section id="lobby-despesas" class="lobby">
+            <h2>Contas a Pagar</h2>
+            <p style="font-size: 0.9rem; color: var(--text-light); margin-bottom: 1rem;">Registre as despesas do mês e a data exata do vencimento.</p>
+            <div class="card">
+                <form id="form-despesa-fixa">
+                    <div class="form-group">
+                        <label>Descrição da Conta</label>
+                        <select id="df-descricao" required>
+                            <option value="Agua">Agua</option>
+                            <option value="Luz">Luz</option>
+                            <option value="Internet">Internet</option>
+                            <option value="IPTU">IPTU</option>
+                            <option value="MEI">MEI</option>
+                            <option value="Casa">Casa</option>
+                            <option value="Mãe(LUZ)">Mãe(LUZ)</option>
+                            <option value="Mãe(AGUA)">Mãe(AGUA)</option>
+                            <option value="Mãe(INTERNET)">Mãe(INTERNET)</option>
+                            <option value="Tax Lixo">Tax Lixo</option>
+                        </select>
+                    </div>
+                    <div class="form-grid-metas">
+                        <div class="form-group">
+                            <label>Valor (R$)</label>
+                            <input type="number" id="df-valor" step="0.01" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Vencimento Específico</label>
+                            <input type="date" id="df-vencimento" required>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn-primary" style="background-color: #f57c00;">Cadastrar Conta</button>
+                </form>
+            </div>
+            
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; margin-top: 1.5rem;">
+                <h3>Minhas Contas</h3>
+                <input type="month" id="mes-filtro-contas" style="padding: 0.5rem; border-radius: 8px; border: 1px solid #ddd; font-size: 0.9rem; max-width: 150px;">
+            </div>
+            <div id="lista-despesas-fixas" class="extrato"></div>
+        </section>
+
+        <!-- 5. CARTÕES DE CRÉDITO -->
+        <section id="lobby-cartoes" class="lobby">
+            <h2>Faturas de Cartões</h2>
+            <p style="font-size: 0.9rem; color: var(--text-light); margin-bottom: 1rem;">Registre as faturas dos cartões com suas datas exatas de vencimento.</p>
+            <div class="card">
+                <form id="form-cartao">
+                    <div class="form-group">
+                        <label>Nome do Cartão / Banco</label>
+                        <input type="text" id="cc-nome" placeholder="Ex: Nubank, Itaú..." required>
+                    </div>
+                    <div class="form-grid-metas">
+                        <div class="form-group">
+                            <label>Valor da Fatura (R$)</label>
+                            <input type="number" id="cc-valor" step="0.01" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Vencimento Específico</label>
+                            <input type="date" id="cc-vencimento" required>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn-primary" style="background-color: #009688;">Cadastrar Fatura</button>
+                </form>
+            </div>
+            
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; margin-top: 1.5rem;">
+                <h3>Minhas Faturas</h3>
+                <input type="month" id="mes-filtro-cartoes" style="padding: 0.5rem; border-radius: 8px; border: 1px solid #ddd; font-size: 0.9rem; max-width: 150px;">
+            </div>
+            <div id="lista-cartoes" class="extrato"></div>
+        </section>
+
+        <!-- 6. INVESTIMENTOS -->
         <section id="lobby-investimentos" class="lobby">
             <h2>Gestão de Ativos</h2>
-            
             <div class="card">
                 <details>
                     <summary style="cursor: pointer; font-weight: bold; color: var(--primary);">Definir Metas de Carteira (%)</summary>
@@ -192,6 +283,7 @@
             <div id="lista-investimentos" class="extrato"></div>
         </section>
 
+        <!-- 7. IMPOSTO DE RENDA -->
         <section id="lobby-ir" class="lobby">
             <h2>Relatório para IR e DASN</h2>
             <p style="font-size: 0.9rem; color: var(--text-light); margin-bottom: 1rem;">Resumo para suas obrigações fiscais. (Valores baseados no Custo de Aquisição e Entradas registradas).</p>
@@ -221,13 +313,25 @@
     </main>
 
     <nav class="bottom-nav">
-        <button class="nav-item active" data-target="lobby-dashboard">
-            <span class="material-icons">dashboard</span>
+        <button class="nav-item active" data-target="lobby-inicio">
+            <span class="material-icons">home</span>
             <span>Início</span>
+        </button>
+        <button class="nav-item" data-target="lobby-dashboard">
+            <span class="material-icons">pie_chart</span>
+            <span>Dashboard</span>
         </button>
         <button class="nav-item" data-target="lobby-lancamentos">
             <span class="material-icons">add_circle</span>
             <span>Lançar</span>
+        </button>
+        <button class="nav-item" data-target="lobby-despesas">
+            <span class="material-icons">receipt_long</span>
+            <span>Contas</span>
+        </button>
+        <button class="nav-item" data-target="lobby-cartoes">
+            <span class="material-icons">credit_card</span>
+            <span>Cartões</span>
         </button>
         <button class="nav-item" data-target="lobby-investimentos">
             <span class="material-icons">trending_up</span>
@@ -239,6 +343,7 @@
         </button>
     </nav>
 
+    <!-- Modais Inteligentes (Sem hardcode de type) -->
     <div id="modal-overlay" class="modal-overlay">
         <div id="modal-alert" class="modal-box">
             <h3 id="modal-alert-title">Alerta</h3>
@@ -258,7 +363,8 @@
         <div id="modal-prompt" class="modal-box">
             <h3 id="modal-prompt-title" style="color: #1976d2;">Entrada de Dados</h3>
             <p id="modal-prompt-msg">Mensagem</p>
-            <input type="text" id="modal-prompt-input" style="width: 100%; margin-bottom: 1rem; padding: 0.7rem; border-radius: 8px; border: 1px solid #ddd;">
+            <!-- Alterado para input genérico. O JS controlará se é número ou texto -->
+            <input id="modal-prompt-input" style="width: 100%; margin-bottom: 1rem; padding: 0.7rem; border-radius: 8px; border: 1px solid #ddd; font-size: 1rem;">
             <div class="modal-actions">
                 <button id="modal-prompt-cancel" class="btn-secondary">Cancelar</button>
                 <button id="modal-prompt-ok" class="btn-primary" style="background-color: #1976d2;">Salvar</button>
@@ -266,6 +372,6 @@
         </div>
     </div>
 
-    <script src="app.js"></script>
+    <script type="module" src="app.js"></script>
 </body>
 </html>
